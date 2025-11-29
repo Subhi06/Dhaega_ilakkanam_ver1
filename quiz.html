@@ -1,64 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="ta">
 <head>
-  <title>Quiz</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="firebase.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - தேக வகை அறிதல்</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>Quiz</h2>
-  <form id="quizForm">
-    <div id="questionsContainer"></div>
-    <button type="submit">Submit</button>
-  </form>
+    <div class="container">
+        <div class="quiz-box">
+            <div class="quiz-header">
+                <h2 id="username-display"></h2>
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <p class="question-counter">கேள்வி <span id="current-question">1</span> / <span id="total-questions">20</span></p>
+            </div>
+            
+            <div class="quiz-content">
+                <h3 id="question-text"></h3>
+                <div id="options-container"></div>
+            </div>
+            
+            <div class="quiz-navigation">
+                <button id="prev-btn" class="btn-secondary" disabled>முந்தைய</button>
+                <button id="next-btn" class="btn-primary">அடுத்து</button>
+            </div>
+        </div>
+    </div>
 
-  <script>
-    const username = localStorage.getItem('username');
-    const age = localStorage.getItem('age');
+    <script type="module">
+        import { questions } from './quiz.js';
+        import { saveQuizResponse } from './firebase.js';
 
-    // Load questions from Firestore
-    const questionsContainer = document.getElementById('questionsContainer');
-    db.collection('questions').get().then(snapshot => {
-      snapshot.docs.forEach((doc, index) => {
-        const q = doc.data();
-        questionsContainer.innerHTML += `
-          <div>
-            <p>${index+1}) ${q.question}</p>
-            <input type="radio" name="q${index}" value="a" required> ${q.optionA} <br>
-            <input type="radio" name="q${index}" value="b"> ${q.optionB} <br>
-            <input type="radio" name="q${index}" value="c"> ${q.optionC} <br>
-          </div>
-          <hr>
-        `;
-      });
-    });
+        let currentQuestion = 0;
+        let answers = {};
+        const totalQuestions = questions.length;
 
-    document.getElementById('quizForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const answers = {};
-      const formData = new FormData(e.target);
-      for (const pair of formData.entries()) {
-        answers[pair[0]] = pair[1];
-      }
+        // Check if user is logged in
+        const username = localStorage.getItem('username');
+        if (!username) {
+            window.location.href = 'login.html';
+        }
 
-      // Calculate result
-      let counts = { a: 0, b: 0, c: 0 };
-      Object.values(answers).forEach(v => counts[v]++);
+        document.getElementById('username-display').textContent = `வணக்கம், ${username}!`;
+        document.getElementById('total-questions').textContent = totalQuestions;
 
-      let result = counts.a >= counts.b && counts.a >= counts.c ? 'வாத தேகி' :
-                   counts.b >= counts.a && counts.b >= counts.c ? 'பித்த தேகி' : 'கப தேகி';
+        function displayQuestion() {
+            const question = questions[currentQuestion];
+            document.getElementById('question-text').textContent = question.question;
+            document.getElementById('current-question').textContent = currentQuestion + 1;
+            
+            // Update progress bar
+            const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+            
+            // Display options
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach((option) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.innerHTML = `
+                    <input type="radio" name="answer" id="option-${option.value}" value="${option.value}" 
+                        ${answers[currentQuestion] === option.value ? 'checked' : ''}>
+                    <label for="option-${option.value}">${option.text}</label>
+                `;
+                optionsContainer.appendChild(optionDiv);
+            });
+            
+            // Add event listeners to radio buttons
+            document.querySelectorAll('input[name="answer"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    answers[currentQuestion] = e.target.value;
+                    updateNavigationButtons();
+                });
+            });
+            
+            updateNavigationButtons();
+        }
 
-      await db.collection('results').add({
-        name: username,
-        age: age,
-        answers: answers,
-        result: result,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
+        function updateNavigationButtons() {
+            document.getElementById('prev-btn').disabled = currentQuestion === 0;
+            
+            const nextBtn = document.getElementById('next-btn');
+            if (currentQuestion === totalQuestions - 1) {
+                nextBtn.textContent = 'முடிவு சமர்ப்பிக்க';
+            } else {
+                nextBtn.textContent = 'அடுத்து';
+            }
+        }
 
-      localStorage.setItem('result', result);
-      window.location.href = 'result.html';
-    });
-  </script>
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                displayQuestion();
+            }
+        });
+
+        document.getElementById('next-btn').addEventListener('click', async () => {
+            if (!answers[currentQuestion]) {
+                alert('தயவுசெய்து ஒரு பதிலை தேர்ந்தெடுக்கவும்');
+                return;
+            }
+            
+            if (currentQuestion < totalQuestions - 1) {
+                currentQuestion++;
+                displayQuestion();
+            } else {
+                // Quiz completed
+                await submitQuiz();
+            }
+        });
+
+        async function submitQuiz() {
+            try {
+                // Calculate scores
+                const scores = { A: 0, B: 0, C: 0 };
+                Object.values(answers).forEach(answer => {
+                    scores[answer]++;
+                });
+                
+                // Save to Firebase
+                await saveQuizResponse(answers, scores);
+                
+                // Save to localStorage
+                localStorage.setItem('quizScores', JSON.stringify(scores));
+                
+                // Redirect to result
+                window.location.href = 'result.html';
+            } catch (error) {
+                console.error('Error submitting quiz:', error);
+                alert('பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+            }
+        }
+
+        // Initialize
+        displayQuestion();
+    </script>
 </body>
 </html>

@@ -1,15 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="ta">
 <head>
-  <title>Result</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result - தேக வகை அறிதல்</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>Your Result</h2>
-  <p id="resultText"></p>
+    <div class="container">
+        <div class="result-box">
+            <h1>உங்கள் தேக வகை முடிவு</h1>
+            
+            <div class="result-content">
+                <div class="user-info">
+                    <p><strong>பெயர்:</strong> <span id="result-username"></span></p>
+                    <p><strong>வயது:</strong> <span id="result-age"></span></p>
+                </div>
+                
+                <div class="scores">
+                    <h3>மதிப்பெண்கள்:</h3>
+                    <div class="score-item">
+                        <span>A (வாதம்):</span>
+                        <span id="score-a" class="score-value"></span>
+                    </div>
+                    <div class="score-item">
+                        <span>B (பித்தம்):</span>
+                        <span id="score-b" class="score-value"></span>
+                    </div>
+                    <div class="score-item">
+                        <span>C (கபம்):</span>
+                        <span id="score-c" class="score-value"></span>
+                    </div>
+                </div>
+                
+                <div class="result-type">
+                    <h2>உங்கள் தேக வகை:</h2>
+                    <div class="result-badge" id="result-type"></div>
+                    <p class="result-description" id="result-description"></p>
+                </div>
+            </div>
+            
+            <div class="result-actions">
+                <button onclick="window.location.href='login.html'" class="btn-secondary">மீண்டும் தொடங்கு</button>
+                <button onclick="window.print()" class="btn-primary">அச்சிடு</button>
+            </div>
+        </div>
+    </div>
 
-  <script>
-    const result = localStorage.getItem('result');
-    document.getElementById('resultText').innerText = `உங்கள் தேகி வகை: ${result}`;
-  </script>
+    <script type="module">
+        // Check if user completed quiz
+        const username = localStorage.getItem('username');
+        const age = localStorage.getItem('age');
+        const scoresStr = localStorage.getItem('quizScores');
+        
+        if (!username || !scoresStr) {
+            window.location.href = 'login.html';
+        }
+        
+        const scores = JSON.parse(scoresStr);
+        
+        // Display user info
+        document.getElementById('result-username').textContent = username;
+        document.getElementById('result-age').textContent = age;
+        
+        // Display scores
+        document.getElementById('score-a').textContent = scores.A;
+        document.getElementById('score-b').textContent = scores.B;
+        document.getElementById('score-c').textContent = scores.C;
+        
+        // Determine body type
+        let resultType = '';
+        let resultDescription = '';
+        
+        const maxScore = Math.max(scores.A, scores.B, scores.C);
+        
+        if (scores.A === maxScore) {
+            resultType = 'வாத தேகி';
+            resultDescription = 'வாத தேகம் என்பது காற்று மற்றும் வெளியின் கலவையாகும். இவர்கள் பொதுவாக மெலிந்த உடல் அமைப்பு கொண்டவர்கள். வேகமாக செயல்படுபவர்கள், ஆனால் விரைவில் சோர்வடைபவர்கள். படைப்பாற்றல் மிக்கவர்கள்.';
+        } else if (scores.B === maxScore) {
+            resultType = 'பித்த தேகி';
+            resultDescription = 'பித்த தேகம் என்பது நெருப்பு மற்றும் நீரின் கலவையாகும். இவர்கள் நடுத்தர உடல் அமைப்பு கொண்டவர்கள். வெப்பமான உடல் வெப்பநிலை, நல்ல செரிமானம், கூர்மையான புத்தி மற்றும் தலைமைத்துவ குணம் கொண்டவர்கள்.';
+        } else {
+            resultType = 'கப தேகி';
+            resultDescription = 'கப தேகம் என்பது நீர் மற்றும் மண்ணின் கலவையாகும். இவர்கள் வலுவான, பருமனான உடல் அமைப்பு கொண்டவர்கள். நிதானமாக செயல்படுபவர்கள், நல்ல நினைவாற்றல், பொறுமை மற்றும் அன்பு நிறைந்தவர்கள்.';
+        }
+        
+        document.getElementById('result-type').textContent = resultType;
+        document.getElementById('result-description').textContent = resultDescription;
+    </script>
 </body>
 </html>

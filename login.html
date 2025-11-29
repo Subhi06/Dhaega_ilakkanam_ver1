@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - தேக வகை அறிதல்</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h1>தேக வகை அறிதல்</h1>
+            <p class="subtitle">உங்கள் தேக இயல்பை கண்டறியுங்கள்</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">பெயர்</label>
+                    <input type="text" id="username" name="username" required placeholder="உங்கள் பெயரை உள்ளிடுக">
+                </div>
+                
+                <div class="form-group">
+                    <label for="age">வயது</label>
+                    <input type="number" id="age" name="age" min="1" max="120" required placeholder="உங்கள் வயதை உள்ளிடுக">
+                </div>
+                
+                <button type="submit" class="btn-primary">தொடங்கு</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { saveUserData } from './firebase.js';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const age = document.getElementById('age').value;
+            
+            if (username && age) {
+                try {
+                    // Save to localStorage
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('age', age);
+                    localStorage.setItem('userId', Date.now().toString());
+                    
+                    // Save to Firebase
+                    await saveUserData(username, age);
+                    
+                    // Redirect to quiz
+                    window.location.href = 'quiz.html';
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('உள்நுழைவில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
