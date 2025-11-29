@@ -1,570 +1,107 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ta">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Symptom Severity Checker — Demo</title>
-
-  <!-- Bootstrap 5 CSS (CDN) -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.4/font/bootstrap-icons.css" rel="stylesheet">
-
-  <!-- AOS for simple scroll/entrance animations -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
-
-  <style>
-    :root{
-      --bg:#0b0f13;
-      --card:#0f1720;
-      --muted:#9aa4b2;
-      --accent:#6ee7b7;
-      --danger:#ff6b6b;
-      --soft:#0e1620;
-    }
-    html,body{
-      height:100%;
-      background: radial-gradient(1200px 600px at 10% 10%, rgba(120,100,255,0.06), transparent),
-                  linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%),
-                  var(--bg);
-      color:#e6eef6;
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    }
-
-    .app-card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border: 1px solid rgba(255,255,255,0.04);
-      box-shadow: 0 6px 30px rgba(2,6,23,0.6);
-      border-radius: 14px;
-      padding: 24px;
-    }
-
-    .question-card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 14px;
-      transition: transform .35s ease, box-shadow .35s ease;
-    }
-    .question-card:hover{ transform: translateY(-4px); box-shadow: 0 10px 30px rgba(2,6,23,0.55);}
-
-    .option-btn{
-      background: transparent;
-      border:1px solid rgba(255,255,255,0.06);
-      color:var(--muted);
-      padding: 12px 14px;
-      border-radius: 10px;
-      width:100%;
-      text-align:left;
-      transition: background .18s, color .18s, transform .12s;
-    }
-    .option-btn:hover{ transform: translateY(-2px); background: rgba(255,255,255,0.02); color:#fff; }
-    .option-btn.active{
-      background: linear-gradient(90deg, rgba(110,231,183,0.12), rgba(102,126,234,0.06));
-      color: var(--accent);
-      border-color: rgba(110,231,183,0.18);
-      box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2);
-    }
-
-    .progress {
-      height: 12px;
-      background: rgba(255,255,255,0.04);
-      border-radius: 999px;
-    }
-    .progress-bar {
-      border-radius: 999px;
-    }
-
-    .result-badge {
-      padding: 12px 18px;
-      border-radius: 999px;
-      font-weight:600;
-      display:inline-flex;
-      gap:10px;
-      align-items:center;
-    }
-
-    .emergency {
-      background: linear-gradient(90deg,#ff6b6b,#ff9a9a);
-      color: #fff;
-    }
-    .severe { background: linear-gradient(90deg,#ffb86b,#ff7a7a); color:#1a140f; }
-    .moderate { background: linear-gradient(90deg,#ffd36b,#ffeaa3); color:#1a140f;}
-    .mild { background: linear-gradient(90deg,#6ee7b7,#a6f5d6); color:#072118; }
-
-    .small-muted { color:var(--muted); font-size:0.9rem; }
-
-    /* subtle flip animation for result card */
-    .flip-enter { transform: rotateX(-90deg); opacity:0; transform-origin:center top; transition: transform .45s ease, opacity .45s ease; }
-    .flip-enter-active { transform: rotateX(0deg); opacity:1; }
-
-    @media (max-width:767px){
-      .app-card{ padding:16px; border-radius:10px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayurveda Body Type Assessment</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-lg-8 col-md-10">
-        <div class="app-card" data-aos="fade-up">
-          <div class="d-flex align-items-start justify-content-between mb-3">
-            <div>
-              <h3 class="mb-1">Symptom Severity Checker</h3>
-              <div class="small-muted">Informational only — not a diagnosis. If you feel unwell, seek medical attention.</div>
+    <div class="container" id="app">
+        <!-- Login Page -->
+        <div id="loginPage" class="page active">
+            <div class="logo">
+                <h1>🌿 Ayurveda Body Type</h1>
+                <p>தமிழ் உடல் வகை மதிப்பீடு</p>
             </div>
-            <div class="text-end">
-              <button id="themeToggle" class="btn btn-sm btn-outline-light"><i class="bi bi-moon-stars"></i> Dark</button>
-            </div>
-          </div>
-
-          <!-- progress -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between mb-1 small-muted">
-              <div id="progressText">Question 1 of 6</div>
-              <div id="scoreText">Score: 0</div>
-            </div>
-            <div class="progress" role="progressbar" aria-label="Progress">
-              <div id="progressBar" class="progress-bar bg-success" style="width:0%"></div>
-            </div>
-          </div>
-
-          <!-- questions area -->
-          <div id="questionArea"></div>
-
-          <!-- controls -->
-          <div class="d-flex justify-content-between align-items-center mt-3">
-            <div>
-              <button id="prevBtn" class="btn btn-outline-light btn-sm" disabled><i class="bi bi-arrow-left"></i> Previous</button>
-            </div>
-            <div>
-              <button id="nextBtn" class="btn btn-success btn-sm">Next <i class="bi bi-arrow-right"></i></button>
-              <button id="submitBtn" class="btn btn-primary btn-sm d-none">Get Result</button>
-            </div>
-          </div>
-
-          <!-- footer note -->
-          <hr class="my-4" style="border-color: rgba(255,255,255,0.03)">
-          <div class="d-flex justify-content-between align-items-center small-muted">
-            <div>Designed for informational & educational use.</div>
-            <div>Version 1.0</div>
-          </div>
+            <form onsubmit="loginUser(event)" class="login-form">
+                <div class="form-group">
+                    <label for="username">பெயர் (Name)</label>
+                    <input type="text" id="username" placeholder="உங்கள் பெயரை உள்ளிடவும்" required>
+                </div>
+                <div class="form-group">
+                    <label for="age">வயது (Age)</label>
+                    <input type="number" id="age" placeholder="உங்கள் வயதை உள்ளிடவும்" min="1" max="120" required>
+                </div>
+                <button type="submit" class="btn btn-primary">தொடங்கு (Start)</button>
+            </form>
         </div>
 
-        <!-- result modal / card -->
-        <div class="mt-4" id="resultArea" style="display:none;" data-aos="zoom-in">
-          <div class="app-card p-4 flip-enter-active" id="resultCard">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <h4 id="resultTitle" class="mb-1">Result</h4>
-                <div id="resultSubtitle" class="small-muted">Summary of your choices</div>
-              </div>
-              <div id="resultBadge" class="result-badge mild">Mild</div>
+        <!-- Quiz Page -->
+        <div id="quizPage" class="page">
+            <div class="logo">
+                <h1>உடல் வகை மதிப்பீடு</h1>
+                <p id="userName"></p>
             </div>
-
-            <div class="mt-3" id="resultMessage">
-              <!-- message in JS -->
-            </div>
-
-            <div class="mt-4 d-flex gap-2">
-              <button id="exportBtn" class="btn btn-outline-light btn-sm"><i class="bi bi-download"></i> Export</button>
-              <button id="retakeBtn" class="btn btn-secondary btn-sm">Start Over</button>
-              <a id="helpLink" class="btn btn-outline-success btn-sm ms-auto" href="mailto:help@example.com?subject=Symptom%20Checker%20help">Contact Help</a>
-            </div>
-          </div>
+            <div id="questionsContainer"></div>
+            <button class="btn btn-primary" onclick="submitQuiz()">முடிவை காண்க</button>
+            <button class="btn btn-secondary" onclick="logout()">வெளியேறு</button>
         </div>
 
-      </div>
+        <!-- Results Page -->
+        <div id="resultsPage" class="page">
+            <div class="result-card">
+                <h2>உங்கள் முடிவு</h2>
+                <div class="score-breakdown">
+                    <div class="score-item">
+                        <h4>வாதம்</h4>
+                        <div class="score" id="scoreA">0</div>
+                    </div>
+                    <div class="score-item">
+                        <h4>பித்தம்</h4>
+                        <div class="score" id="scoreB">0</div>
+                    </div>
+                    <div class="score-item">
+                        <h4>கபம்</h4>
+                        <div class="score" id="scoreC">0</div>
+                    </div>
+                </div>
+                <h3 id="dominantType" style="margin-top: 20px; font-size: 24px;"></h3>
+            </div>
+            <button class="btn btn-primary" onclick="retakeQuiz()">மீண்டும் எடுக்க</button>
+            <button class="btn btn-secondary" onclick="logout()">வெளியேறு</button>
+        </div>
+
+        <!-- Admin Page -->
+        <div id="adminPage" class="page">
+            <div class="admin-header">
+                <h1>Admin Panel</h1>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+
+            <div class="question-form">
+                <h3>Add New Question</h3>
+                <div class="form-group">
+                    <label>Question (Tamil)</label>
+                    <input type="text" id="questionText" placeholder="கேள்வியை இங்கே எழுதவும்">
+                </div>
+                <div class="form-group">
+                    <label>Option A (வாதம்)</label>
+                    <input type="text" id="optionA" placeholder="விருப்பம் A">
+                </div>
+                <div class="form-group">
+                    <label>Option B (பித்தம்)</label>
+                    <input type="text" id="optionB" placeholder="விருப்பம் B">
+                </div>
+                <div class="form-group">
+                    <label>Option C (கபம்)</label>
+                    <input type="text" id="optionC" placeholder="விருப்பம் C">
+                </div>
+                <button class="btn btn-primary" onclick="addQuestion()">Add Question</button>
+            </div>
+
+            <div class="question-list">
+                <h3>Existing Questions</h3>
+                <div id="adminQuestionsList"></div>
+            </div>
+
+            <div class="user-results">
+                <h3>User Results</h3>
+                <div id="userResultsList"></div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Bootstrap JS + Popper (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- AOS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-
-  <script>
-    AOS.init({ once:true, duration:700 });
-
-    /***** ===== CONFIG: Edit questions & thresholds here ===== *****/
-    // Questions array: text + options (label + score)
-    const QUESTIONS = [
-      {
-        id: 'q1',
-        text: 'Do you have a fever?',
-        options: [
-          { text: 'No fever', value: 0 },
-          { text: 'Low-grade fever (37.5–38°C)', value: 1 },
-          { text: 'High fever (38–39°C)', value: 2 },
-          { text: 'Very high fever (>39°C)', value: 3 }
-        ]
-      },
-      {
-        id: 'q2',
-        text: 'How severe is your cough?',
-        options: [
-          { text: 'No cough', value: 0 },
-          { text: 'Mild cough', value: 1 },
-          { text: 'Persistent cough', value: 2 },
-          { text: 'Severe cough with difficulty breathing', value: 3 }
-        ]
-      },
-      {
-        id: 'q3',
-        text: 'Are you experiencing chest pain or pressure?',
-        options: [
-          { text: 'No', value: 0 },
-          { text: 'Mild / occasional', value: 2 },
-          { text: 'Frequent / moderate', value: 3 },
-          { text: 'Severe / continuous', value: 4 }
-        ]
-      },
-      {
-        id: 'q4',
-        text: 'Do you feel dizzy or faint?',
-        options: [
-          { text: 'No', value: 0 },
-          { text: 'Occasional lightheadedness', value: 1 },
-          { text: 'Often dizzy', value: 2 },
-          { text: 'Fainting or nearly fainting', value: 4 }
-        ]
-      },
-      {
-        id: 'q5',
-        text: 'How bad is your fatigue?',
-        options: [
-          { text: 'None', value: 0 },
-          { text: 'Mild tiredness', value: 1 },
-          { text: 'Moderate, affects activities', value: 2 },
-          { text: 'Severe, cannot perform normal tasks', value: 3 }
-        ]
-      },
-      {
-        id: 'q6',
-        text: 'Are you having trouble breathing?',
-        options: [
-          { text: 'No', value: 0 },
-          { text: 'Shortness of breath on exertion', value: 2 },
-          { text: 'Shortness at rest', value: 3 },
-          { text: 'Severe breathing difficulty, gasping', value: 5 }
-        ]
-      }
-    ];
-
-    // Severity thresholds: adjust as needed
-    // totalScore <= MILD_MAX => Mild
-    // <= MODERATE_MAX => Moderate
-    // <= SEVERE_MAX => Severe
-    // otherwise => Emergency
-    const THRESHOLDS = {
-      MILD_MAX: 3,
-      MODERATE_MAX: 7,
-      SEVERE_MAX: 12
-    };
-    /***** ===== END CONFIG ===== *****/
-
-    // state
-    let currentIndex = 0;
-    const answers = {}; // { questionId: chosenOptionIndex }
-    let totalScore = 0;
-
-    // cached DOM
-    const questionArea = document.getElementById('questionArea');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const scoreText = document.getElementById('scoreText');
-    const resultArea = document.getElementById('resultArea');
-    const resultBadge = document.getElementById('resultBadge');
-    const resultTitle = document.getElementById('resultTitle');
-    const resultSubtitle = document.getElementById('resultSubtitle');
-    const resultMessage = document.getElementById('resultMessage');
-    const exportBtn = document.getElementById('exportBtn');
-    const retakeBtn = document.getElementById('retakeBtn');
-    const themeToggle = document.getElementById('themeToggle');
-    const helpLink = document.getElementById('helpLink');
-
-    // initialize UI
-    function init() {
-      renderQuestion(currentIndex);
-      updateProgress();
-      prevBtn.addEventListener('click', onPrev);
-      nextBtn.addEventListener('click', onNext);
-      submitBtn.addEventListener('click', onSubmit);
-      exportBtn.addEventListener('click', onExport);
-      retakeBtn.addEventListener('click', onRetake);
-      themeToggle.addEventListener('click', toggleTheme);
-
-      // allow keyboard navigation
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight') onNext();
-        if (e.key === 'ArrowLeft') onPrev();
-      });
-    }
-
-    function renderQuestion(index) {
-      const q = QUESTIONS[index];
-      questionArea.innerHTML = '';
-
-      // question header
-      const qCard = document.createElement('div');
-      qCard.className = 'question-card';
-      qCard.setAttribute('data-aos','fade-up');
-
-      qCard.innerHTML = `
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <h5 class="mb-1">${index+1}. ${escapeHtml(q.text)}</h5>
-            <div class="small-muted">Choose the option that best describes your current symptom status.</div>
-          </div>
-          <div class="small-muted text-end">Q${index+1}/${QUESTIONS.length}</div>
-        </div>
-        <div class="mt-3" id="optionsContainer"></div>
-      `;
-      questionArea.appendChild(qCard);
-
-      const optionsContainer = qCard.querySelector('#optionsContainer');
-
-      q.options.forEach((opt, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn mb-2';
-        btn.innerHTML = `<div><strong>${opt.text}</strong></div><div class="small-muted">Score: ${opt.value}</div>`;
-        btn.addEventListener('click', () => {
-          selectOption(q.id, i, btn);
-        });
-
-        // restore selection if present
-        if (answers[q.id] === i) btn.classList.add('active');
-
-        optionsContainer.appendChild(btn);
-      });
-
-      // show/hide nav buttons
-      prevBtn.disabled = index === 0;
-      if (index === QUESTIONS.length - 1) {
-        nextBtn.classList.add('d-none');
-        submitBtn.classList.remove('d-none');
-      } else {
-        nextBtn.classList.remove('d-none');
-        submitBtn.classList.add('d-none');
-      }
-
-      // update progress text
-      progressText.textContent = `Question ${index+1} of ${QUESTIONS.length}`;
-    }
-
-    function selectOption(qid, optIndex, btnEl) {
-      // mark in state
-      answers[qid] = optIndex;
-      // visually mark
-      const siblings = btnEl.parentElement.querySelectorAll('.option-btn');
-      siblings.forEach(s => s.classList.remove('active'));
-      btnEl.classList.add('active');
-
-      // update score display (temporary live)
-      calculateTotalScore();
-      updateProgress();
-    }
-
-    function calculateTotalScore() {
-      totalScore = 0;
-      for (const q of QUESTIONS) {
-        if (answers[q.id] !== undefined) {
-          const chosenIdx = answers[q.id];
-          const val = q.options[chosenIdx]?.value || 0;
-          totalScore += Number(val);
-        }
-      }
-    }
-
-    function updateProgress() {
-      const answered = Object.keys(answers).length;
-      const percent = Math.round((answered / QUESTIONS.length) * 100);
-      progressBar.style.width = percent + '%';
-      // color the progress depending on percent/score
-      if (totalScore >= THRESHOLDS.SEVERE_MAX) {
-        progressBar.className = 'progress-bar bg-danger';
-      } else if (totalScore > THRESHOLDS.MODERATE_MAX) {
-        progressBar.className = 'progress-bar' + ' bg-warning';
-      } else {
-        progressBar.className = 'progress-bar bg-success';
-      }
-
-      scoreText.textContent = `Score: ${totalScore}`;
-    }
-
-    function onNext() {
-      // require selection before moving next
-      const q = QUESTIONS[currentIndex];
-      if (answers[q.id] === undefined) {
-        flashMessage('Please select an option before moving to the next question.');
-        return;
-      }
-      if (currentIndex < QUESTIONS.length - 1) currentIndex++;
-      renderQuestion(currentIndex);
-    }
-
-    function onPrev() {
-      if (currentIndex > 0) currentIndex--;
-      renderQuestion(currentIndex);
-    }
-
-    function onSubmit() {
-      // ensure all answered
-      if (Object.keys(answers).length !== QUESTIONS.length) {
-        flashMessage('Please answer all questions before viewing results.');
-        return;
-      }
-      calculateTotalScore();
-      showResults();
-    }
-
-    function showResults() {
-      // compute severity
-      let severityLabel = 'Mild';
-      let severityKey = 'mild';
-      if (totalScore <= THRESHOLDS.MILD_MAX) {
-        severityLabel = 'Mild';
-        severityKey = 'mild';
-      } else if (totalScore <= THRESHOLDS.MODERATE_MAX) {
-        severityLabel = 'Moderate';
-        severityKey = 'moderate';
-      } else if (totalScore <= THRESHOLDS.SEVERE_MAX) {
-        severityLabel = 'Severe';
-        severityKey = 'severe';
-      } else {
-        severityLabel = 'Emergency';
-        severityKey = 'emergency';
-      }
-
-      // badge styling
-      resultBadge.className = 'result-badge ' + severityKey;
-      resultBadge.textContent = severityLabel;
-
-      // title & message
-      resultTitle.textContent = severityLabel + ' — Suggested severity';
-      resultSubtitle.textContent = `Total score: ${totalScore} (max possible ${maxPossibleScore()})`;
-
-      let msg = '';
-      if (severityKey === 'mild') {
-        msg = `<p>Based on your responses, symptoms seem mild. Monitor yourself closely, rest, and stay hydrated.</p>
-               <p class="small-muted">If symptoms worsen or persist more than a few days, contact a healthcare professional.</p>`;
-      } else if (severityKey === 'moderate') {
-        msg = `<p>Your responses indicate a moderate level of symptoms. Consider contacting a healthcare provider for guidance. Avoid strenuous activity.</p>
-               <p class="small-muted">If you have risk factors (age, chronic conditions) — seek medical advice sooner.</p>`;
-      } else if (severityKey === 'severe') {
-        msg = `<p>Your symptoms appear severe. Please contact a healthcare professional urgently and consider in-person evaluation.</p>
-               <p class="small-muted">If breathing difficulty, confusion, or persistent chest pain occurs, seek emergency care.</p>`;
-      } else {
-        msg = `<p class="fw-bold">Emergency signs detected. Call local emergency services immediately or go to the nearest emergency department.</p>
-               <p class="small-muted">This tool is informational only — seek immediate professional help.</p>`;
-      }
-
-      // include list of question+answer pairs
-      msg += '<hr><h6>Summary of your answers</h6><ul>';
-      for (const q of QUESTIONS) {
-        const chosenIdx = answers[q.id];
-        const chosen = q.options[chosenIdx] ? q.options[chosenIdx].text : 'No answer';
-        msg += `<li><strong>${escapeHtml(q.text)}</strong> — ${escapeHtml(chosen)}</li>`;
-      }
-      msg += '</ul>';
-
-      // add reminder/disclaimer
-      msg += `<div class="mt-3 small-muted"><strong>Disclaimer:</strong> This result is informational only and not a medical diagnosis. For medical advice, consult a qualified healthcare professional.</div>`;
-
-      resultMessage.innerHTML = msg;
-
-      // show area
-      resultArea.style.display = 'block';
-      // scroll into view
-      resultArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function onExport() {
-      // create CSV with question, answer, score
-      let csv = 'Question,Answer,Score\\n';
-      for (const q of QUESTIONS) {
-        const chosenIdx = answers[q.id];
-        const chosenOpt = q.options[chosenIdx] || {text:'', value:0};
-        // sanitize quotes
-        const qtxt = '"' + q.text.replace(/"/g,'""') + '"';
-        const atxt = '"' + chosenOpt.text.replace(/"/g,'""') + '"';
-        csv += `${qtxt},${atxt},${chosenOpt.value}\\n`;
-      }
-      csv += `"Total Score", "${totalScore}", ""\\n`;
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'symptom-check-result.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    function onRetake() {
-      // reset
-      for (const k in answers) delete answers[k];
-      currentIndex = 0;
-      totalScore = 0;
-      resultArea.style.display = 'none';
-      renderQuestion(currentIndex);
-      updateProgress();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // small helpers
-    function maxPossibleScore(){
-      let sum = 0;
-      for (const q of QUESTIONS) {
-        const max = Math.max(...q.options.map(o=>Number(o.value)));
-        sum += max;
-      }
-      return sum;
-    }
-
-    function flashMessage(text){
-      // temporary toast-like at top
-      const toast = document.createElement('div');
-      toast.className = 'position-fixed top-0 start-50 translate-middle-x mt-3 px-3 py-2 rounded shadow';
-      toast.style.background = 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))';
-      toast.style.border = '1px solid rgba(255,255,255,0.06)';
-      toast.style.color = '#fff';
-      toast.textContent = text;
-      document.body.appendChild(toast);
-      setTimeout(()=>{ toast.style.opacity = '0'; toast.style.transform = 'translateY(-10px)'; }, 2000);
-      setTimeout(()=> toast.remove(), 2600);
-    }
-
-    function escapeHtml(s){
-      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-    }
-
-    // theme toggle (dark/light) — persisting preference
-    function toggleTheme(){
-      if (document.documentElement.classList.contains('light-mode')) {
-        document.documentElement.classList.remove('light-mode');
-        themeToggle.innerHTML = '<i class="bi bi-moon-stars"></i> Dark';
-        // revert CSS variables if needed (we kept dark as default)
-      } else {
-        document.documentElement.classList.add('light-mode');
-        // apply a very light switch by overriding root variables
-        document.documentElement.style.setProperty('--bg','#f6f8fb');
-        document.documentElement.style.setProperty('--card','#ffffff');
-        document.documentElement.style.setProperty('--muted','#667085');
-        document.documentElement.style.setProperty('--accent','#0b7285');
-        document.documentElement.style.setProperty('--danger','#ff6b6b');
-        themeToggle.innerHTML = '<i class="bi bi-sun"></i> Light';
-      }
-    }
-
-    // initial call
-    init();
-  </script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
