@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin-style.css">
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="admin-body">
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Admin Dashboard</h1>
+            <div class="header-actions">
+                <button id="refreshBtn" class="btn-secondary">🔄 Refresh</button>
+                <button id="logoutBtn" class="btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- Users Table -->
+        <div class="table-section">
+            <h2>User Responses</h2>
+            <div class="table-controls">
+                <input type="text" id="searchInput" placeholder="Search by name..." class="search-input">
+                <select id="filterBodyType" class="filter-select">
+                    <option value="">All Body Types</option>
+                    <option value="வாத தேகி">வாத தேகி</option>
+                    <option value="பித்த தேகி">பித்த தேகி</option>
+                    <option value="கப தேகி">கப தேகி</option>
+                </select>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="responsesTable">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Body Type</th>
+                            <th>A Score</th>
+                            <th>B Score</th>
+                            <th>C Score</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="responsesTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 40px;">
+                                <div class="loading">Loading data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="export-section">
+            <button id="exportExcelBtn" class="btn-primary">📥 Download All as Excel</button>
+            <button id="exportSelectedBtn" class="btn-secondary">📥 Download Selected (<span id="selectedCount">0</span>)</button>
+        </div>
+
+        <!-- Detail Modal -->
+        <div id="detailModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Detailed Response</h2>
+                <div id="detailContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { getAllResponses } from './firebase.js';
+
+        // Check admin authentication
+        if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
+            window.location.href = 'admin-login.html';
+        }
+
+        let allResponses = {};
+        let filteredResponses = {};
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('adminLoggedIn');
+            window.location.href = 'admin-login.html';
+        });
+
+        // Load data
+        async function loadData() {
+            try {
+                allResponses = await getAllResponses();
+                filteredResponses = allResponses;
+                
+                if (allResponses) {
+                    renderTable();
+                } else {
+                    document.getElementById('responsesTableBody').innerHTML = 
+                        '<tr><td colspan="9" style="text-align: center; padding: 40px;">No responses yet</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('responsesTableBody').innerHTML = 
+                    '<tr><td colspan="9" style="text-align: center; padding: 40px; color: red;">Error loading data</td></tr>';
+            }
+        }
+
+        // Render table
+        function renderTable() {
+            const tbody = document.getElementById('responsesTableBody');
+            tbody.innerHTML = '';
+
+            Object.entries(filteredResponses).forEach(([userId, response]) => {
+                // Check if response has required data
+                if (!response || !response.userInfo || !response.results) {
+                    return; // Skip invalid responses
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="checkbox" class="row-checkbox" data-userid="${userId}"></td>
+                    <td>${response.userInfo.username || 'N/A'}</td>
+                    <td>${response.userInfo.age || 'N/A'}</td>
+                    <td><span class="body-type-badge ${(response.results.bodyType || '').replace(' ', '-')}">${response.results.bodyType || 'N/A'}</span></td>
+                    <td>${response.results.scores?.A_வாதம் || 0}</td>
+                    <td>${response.results.scores?.B_பித்தம் || 0}</td>
+                    <td>${response.results.scores?.C_கபம் || 0}</td>
+                    <td>${response.userInfo.date || 'N/A'}</td>
+                    <td>
+                        <button class="btn-view" data-userid="${userId}">View Details</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Show message if no data
+            if (tbody.children.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;">No responses found</td></tr>';
+            }
+
+            // Add event listeners for view buttons
+            document.querySelectorAll('.btn-view').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const userId = e.target.dataset.userid;
+                    showDetailModal(userId);
+                });
+            });
+
+            // Add event listeners for checkboxes to update count
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateSelectedCount);
+            });
+
+            // Reset select all checkbox
+            document.getElementById('selectAll').checked = false;
+            updateSelectedCount();
+        }
+
+        // Update selected count
+        function updateSelectedCount() {
+            const selectedCount = document.querySelectorAll('.row-checkbox:checked').length;
+            document.getElementById('selectedCount').textContent = selectedCount;
+        }
+
+        // Show detail modal
+        function showDetailModal(userId) {
+            const response = allResponses[userId];
+            
+            if (!response || !response.userInfo || !response.results) {
+                alert('Invalid response data');
+                return;
+            }
+
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('detailContent');
+
+            let html = `
+                <div class="detail-section">
+                    <h3>User Information</h3>
+                    <p><strong>Name:</strong> ${response.userInfo.username || 'N/A'}</p>
+                    <p><strong>Age:</strong> ${response.userInfo.age || 'N/A'}</p>
+                    <p><strong>Date:</strong> ${response.userInfo.date || 'N/A'} ${response.userInfo.time || ''}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Results</h3>
+                    <p><strong>Body Type:</strong> ${response.results.bodyType || 'N/A'}</p>
+                    <p><strong>Scores:</strong> A: ${response.results.scores?.A_வாதம் || 0}, B: ${response.results.scores?.B_பித்தம் || 0}, C: ${response.results.scores?.C_கபம் || 0}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Detailed Answers</h3>
+                    <div class="answers-list">
+            `;
+
+            if (response.detailedAnswers) {
+                // Sort the answers by question number
+                const sortedAnswers = Object.entries(response.detailedAnswers)
+                    .sort((a, b) => (a[1].questionNumber || 0) - (b[1].questionNumber || 0));
+
+                sortedAnswers.forEach(([key, answer]) => {
+                    html += `
+                        <div class="answer-item">
+                            <strong>${answer.question || 'N/A'}</strong>
+                            <p>Answer: ${answer.answer || 'N/A'} - ${answer.answerText || 'N/A'}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p>No detailed answers available</p>';
+            }
+
+            html += '</div></div>';
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        }
+
+        // Close modal
+        document.querySelector('.close').addEventListener('click', () => {
+            document.getElementById('detailModal').style.display = 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('detailModal');
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Export to Excel
+        document.getElementById('exportExcelBtn').addEventListener('click', () => {
+            exportToExcel(Object.values(filteredResponses));
+        });
+
+        document.getElementById('exportSelectedBtn').addEventListener('click', () => {
+            const selected = document.querySelectorAll('.row-checkbox:checked');
+            const selectedData = Array.from(selected).map(cb => allResponses[cb.dataset.userid]);
+            if (selectedData.length === 0) {
+                alert('Please select at least one response');
+                return;
+            }
+            exportToExcel(selectedData);
+        });
+
+        function exportToExcel(data) {
+            const excelData = [];
+
+            data.forEach(response => {
+                // Check if response has required data
+                if (!response || !response.userInfo || !response.results) {
+                    return; // Skip invalid responses
+                }
+
+                const row = {
+                    'Name': response.userInfo.username || 'N/A',
+                    'Age': response.userInfo.age || 'N/A',
+                    'Date': response.userInfo.date || 'N/A',
+                    'Time': response.userInfo.time || 'N/A',
+                    'Body Type': response.results.bodyType || 'N/A',
+                    'A Score (வாதம்)': response.results.scores?.A_வாதம் || 0,
+                    'B Score (பித்தம்)': response.results.scores?.B_பித்தம் || 0,
+                    'C Score (கபம்)': response.results.scores?.C_கபம் || 0,
+                    'A Percentage': response.results.percentages?.A_வாதம் || '0%',
+                    'B Percentage': response.results.percentages?.B_பித்தம் || '0%',
+                    'C Percentage': response.results.percentages?.C_கபம் || '0%'
+                };
+
+                // Add all questions and answers in sorted order
+                if (response.detailedAnswers) {
+                    const sortedAnswers = Object.entries(response.detailedAnswers)
+                        .sort((a, b) => (a[1].questionNumber || 0) - (b[1].questionNumber || 0));
+
+                    sortedAnswers.forEach(([key, answer]) => {
+                        row[answer.question || key] = `${answer.answer || 'N/A'} - ${answer.answerText || 'N/A'}`;
+                    });
+                }
+
+                excelData.push(row);
+            });
+
+            if (excelData.length === 0) {
+                alert('No valid data to export');
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Responses");
+            XLSX.writeFile(wb, `quiz_responses_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            filterData();
+        });
+
+        document.getElementById('filterBodyType').addEventListener('change', (e) => {
+            filterData();
+        });
+
+        function filterData() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const bodyTypeFilter = document.getElementById('filterBodyType').value;
+
+            filteredResponses = {};
+            Object.entries(allResponses).forEach(([userId, response]) => {
+                // Check if response has required data
+                if (!response || !response.userInfo || !response.results) {
+                    return; // Skip invalid responses
+                }
+
+                const matchesSearch = response.userInfo.username?.toLowerCase().includes(searchTerm) || false;
+                const matchesBodyType = !bodyTypeFilter || response.results.bodyType === bodyTypeFilter;
+
+                if (matchesSearch && matchesBodyType) {
+                    filteredResponses[userId] = response;
+                }
+            });
+
+            renderTable();
+        }
+
+        // Select all checkbox
+        document.getElementById('selectAll').addEventListener('change', (e) => {
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+            updateSelectedCount();
+        });
+
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+        // Initial load
+        loadData();
+    </script>
+</body>
+</html>

@@ -57,15 +57,20 @@ export async function saveQuizResponse(answers, scores) {
             bodyType = 'கப தேகி';
         }
         
-        // Create detailed answers object with question number as key
+        // Create detailed answers object with question number as key (sorted)
         const detailedAnswers = {};
-        Object.keys(answers).forEach(questionIndex => {
+        
+        // Sort by question index to ensure proper order
+        const sortedIndices = Object.keys(answers).sort((a, b) => parseInt(a) - parseInt(b));
+        
+        sortedIndices.forEach(questionIndex => {
             const question = questions[questionIndex];
             const selectedValue = answers[questionIndex];
             const selectedOption = question.options.find(opt => opt.value === selectedValue);
             
             const questionNum = `question${parseInt(questionIndex) + 1}`;
             detailedAnswers[questionNum] = {
+                questionNumber: parseInt(questionIndex) + 1,
                 question: question.question,
                 answer: selectedValue,
                 answerText: selectedOption ? selectedOption.text : ''

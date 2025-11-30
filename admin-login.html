@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h1>Admin Login</h1>
+            <p class="subtitle">Access Dashboard</p>
+            
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label for="adminUsername">Username</label>
+                    <input type="text" id="adminUsername" name="adminUsername" required placeholder="Enter admin username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="adminPassword">Password</label>
+                    <input type="password" id="adminPassword" name="adminPassword" required placeholder="Enter password">
+                </div>
+                
+                <button type="submit" class="btn-primary">Login</button>
+                
+                <div id="error-message" class="error-message" style="display: none;"></div>
+            </form>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <a href="login.html" style="color: #667eea; text-decoration: none;">← Back to Quiz</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Simple admin credentials (In production, use proper authentication)
+        const ADMIN_USERNAME = 'admin';
+        const ADMIN_PASSWORD = 'admin#123';
+
+        document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            const errorMsg = document.getElementById('error-message');
+            
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                // Set admin session
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                window.location.href = 'admin-dashboard.html';
+            } else {
+                errorMsg.textContent = 'Invalid username or password';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+
+    <style>
+        .error-message {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            text-align: center;
+        }
+    </style>
+</body>
+</html>
